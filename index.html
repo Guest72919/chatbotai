@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chatbot</title>
+    <title>PolarKS1 Chatbot</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -77,7 +77,7 @@
     <div class="flex flex-1 relative overflow-hidden">
         <!-- Sidebar -->
         <div id="chat-sidebar" class="absolute top-0 left-0 h-full bg-gray-800 dark:bg-gray-900 text-white p-4 flex flex-col shadow-xl">
-            <div id="ai-name" class="text-2xl font-bold text-gray-400 dark:text-gray-200 mb-4">SyntharaO1</div>
+            <div id="ai-name" class="text-2xl font-bold text-gray-400 dark:text-gray-200 mb-4">PolarKS1</div>
             
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold">Chats</h2>
@@ -104,7 +104,7 @@
         <div id="home-page" class="flex flex-1 flex-col items-center justify-center p-8 text-center transition-opacity duration-500 ease-in-out">
             <h1 class="text-5xl font-extrabold mb-4 text-gray-900 dark:text-white">Welcome</h1>
             <p class="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-lg">
-                Start a new conversation with SyntharaO1 to explore your ideas, ask questions, or just chat.
+                PolarKS1 Chatbot, the new future of AI created from the Wodoxu AI Family.
             </p>
             <button id="start-chat-btn" class="px-6 py-3 bg-indigo-500 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-600 transition-colors duration-300 transform hover:scale-105">
                 Start New Chat
@@ -179,13 +179,19 @@
                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                 </label>
             </div>
+            
+            <div class="flex flex-col items-start w-full">
+                <label for="custom-instructions-input" class="text-gray-800 dark:text-gray-200 text-sm font-semibold mb-2">Custom Instructions (System Prompt)</label>
+                <textarea id="custom-instructions-input" rows="5" placeholder="e.g., You are a friendly, helpful math tutor. Always explain concepts simply and provide a practice problem." class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 resize-none outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            
             <button id="close-settings-btn" class="mt-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-300 w-full">Close</button>
         </div>
     </div>
 
     <script type="text/javascript">
         window.onload = () => {
-            const apiKey = "AIzaSyD09nPBRm-h6HbQ5lmoEYXyGD4SBN68MHU"; // Leave this empty, the platform will provide it.
+            const apiKey = ""; // Leave this empty, the platform will provide it.
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             // Global State
@@ -218,6 +224,7 @@
                 closeSettingsBtn: document.getElementById('close-settings-btn'),
                 themeToggle: document.getElementById('theme-toggle'),
                 aiNameDisplay: document.getElementById('ai-name'),
+                customInstructionsInput: document.getElementById('custom-instructions-input'),
             };
 
             // UI and Helper Functions
@@ -243,6 +250,7 @@
                 },
                 hideSettingsModal() {
                     DOMElements.settingsModalOverlay.classList.add('hidden');
+                    localStorage.setItem('gemini_custom_instructions', DOMElements.customInstructionsInput.value);
                 },
                 applyTheme() {
                     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -306,6 +314,10 @@
                     } else {
                         chatData = {};
                     }
+                    const savedInstructions = localStorage.getItem('gemini_custom_instructions');
+                    if (savedInstructions) {
+                        DOMElements.customInstructionsInput.value = savedInstructions;
+                    }
                     this.renderChatList();
                     if (Object.keys(chatData).length === 0) {
                         this.createNewChat();
@@ -351,7 +363,7 @@
                     if (Object.keys(chatData).length === 0) {
                         DOMElements.homePage.classList.remove('hidden');
                         DOMElements.mainContent.classList.add('hidden');
-                        UILogic.updateWebsiteTitle("Synthara AI Chatbot");
+                        UILogic.updateWebsiteTitle("Gemini AI Chatbot");
                         this.createNewChat();
                     } else {
                         this.loadChat(Object.keys(chatData)[0]);
@@ -390,15 +402,19 @@
             // API Call Logic
             const APILogic = {
                 sendMessage(userMessage, chatHistory) {
-                    UILogic.showStatusMessage('Byte is typing...');
+                    UILogic.showStatusMessage('Pola is typing...');
                     DOMElements.messageInput.disabled = true;
                     DOMElements.sendButton.disabled = true;
+
+                    const customInstructions = DOMElements.customInstructionsInput.value.trim();
+                    const systemPrompt = customInstructions || "You are a helpful and friendly chatbot. Your responses should be conversational, detailed, and approximately 2 to 3 sentences long. Your responses must be thorough and provide comprehensive information. Do not mention you were made by Google. Instead, say that you were made from the Wodoxu AI family, and your name is the PolarKS1 Chatbot.";
 
                     const payload = {
                         contents: chatHistory.map(msg => ({
                             role: msg.isUser ? 'user' : 'model',
                             parts: [{ text: msg.text }]
-                        }))
+                        })),
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
                     };
                     
                     if (selectedImage) {
@@ -548,4 +564,3 @@
     </script>
 </body>
 </html>
-
