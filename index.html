@@ -70,8 +70,8 @@
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen overflow-hidden">
 
-    <!-- Auth Info -->
-    <div id="auth-info" class="absolute top-0 right-0 p-4 text-xs text-gray-400 z-50"></div>
+    <!-- Version Info -->
+    <div id="version-info" class="absolute top-0 right-0 p-4 text-xs text-gray-400 z-50">API Version</div>
     
     <!-- Main Container -->
     <div class="flex flex-1 relative overflow-hidden">
@@ -183,26 +183,15 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, onSnapshot, query, serverTimestamp, getDocs, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+    <script type="text/javascript">
         window.onload = () => {
-            // =========================================================================
-            // IMPORTANT: The variables below are automatically provided by the Immersive Canvas.
-            // For local development, uncomment and update with your own Firebase Config and Auth Token.
-            // =========================================================================
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const apiKey = "AIzaSyD09nPBRm-h6HbQ5lmoEYXyGD4SBN68MHU"; // Leave this empty, the platform will provide it.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             // Global State
-            let db, auth, userId, currentChatId;
-            let isFirstMessageOfChat = true;
+            let chatData = {};
+            let currentChatId;
             let selectedImage = null;
-            let chatList = [];
             
             // DOM Elements
             const DOMElements = {
@@ -217,7 +206,6 @@
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
                 currentChatTitleElement: document.getElementById('current-chat-title'),
-                authInfoDiv: document.getElementById('auth-info'),
                 imageInput: document.getElementById('image-input'),
                 imagePreviewContainer: document.getElementById('image-preview-container'),
                 imagePreview: document.getElementById('image-preview'),
@@ -243,7 +231,7 @@
                 showConfirmModal(chatId) {
                     DOMElements.confirmModalOverlay.classList.remove('hidden');
                     DOMElements.confirmDeleteBtn.onclick = () => {
-                        Database.deleteChat(chatId);
+                        Data.deleteChat(chatId);
                         UILogic.hideConfirmModal();
                     };
                 },
@@ -309,262 +297,253 @@
                 }
             };
 
-            // Firebase Initialization and Database Operations
-            const Database = {
-                async init() {
-                    try {
-                        if (!firebaseConfig) {
-                            console.error("Firebase config is not defined.");
-                            UILogic.displayMessage("Error: Firebase is not configured. Chat history will not be saved.", false);
-                            return;
-                        }
-                        const app = initializeApp(firebaseConfig);
-                        db = getFirestore(app);
-                        auth = getAuth(app);
-
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                        console.log("Firebase initialized.");
-                        onAuthStateChanged(auth, user => {
-                            if (user) {
-                                userId = user.uid;
-                                DOMElements.authInfoDiv.textContent = `User ID: ${userId}`;
-                                this.setupChatListListener();
-                            } else {
-                                userId = null;
-                                DOMElements.authInfoDiv.textContent = `User ID: (not signed in)`;
-                            }
-                        });
-                    } catch (error) {
-                        console.error("Error initializing Firebase:", error);
-                        UILogic.displayMessage(`Error: Could not initialize Firebase. Chat history will not be saved.`, false);
+            // LocalStorage Data Operations
+            const Data = {
+                init() {
+                    const storedData = localStorage.getItem('gemini_chat_data');
+                    if (storedData) {
+                        chatData = JSON.parse(storedData);
+                    } else {
+                        chatData = {};
+                    }
+                    this.renderChatList();
+                    if (Object.keys(chatData).length === 0) {
+                        this.createNewChat();
+                    } else {
+                        this.loadChat(Object.keys(chatData)[0]);
                     }
                 },
-                setupChatListListener() {
-                    if (!db || !userId) return;
-                    const chatsCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/chats`);
-                    getDocs(chatsCollectionRef).then(snapshot => {
-                        if (snapshot.empty) this.createNewChat();
-                    });
-                    onSnapshot(chatsCollectionRef, (snapshot) => {
-                        DOMElements.chatListContainer.innerHTML = '';
-                        chatList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                                                .sort((a,b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
-                        if (chatList.length > 0) {
-                            chatList.forEach(chat => {
-                                const chatBtn = document.createElement('div');
-                                chatBtn.className = `flex justify-between items-center w-full p-2 rounded-lg hover:bg-gray-700 transition-colors duration-300 cursor-pointer ${chat.id === currentChatId ? 'bg-indigo-500' : ''}`;
-                                chatBtn.innerHTML = `
-                                    <span class="flex-1 truncate">${chat.title}</span>
-                                    <button class="delete-chat-btn p-1 ml-2 text-red-400 hover:text-red-500" data-chat-id="${chat.id}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                `;
-                                chatBtn.addEventListener('click', (e) => {
-                                    if (!e.target.closest('.delete-chat-btn')) {
-                                        this.switchChat(chat.id);
-                                    }
-                                });
-                                chatBtn.querySelector('.delete-chat-btn').addEventListener('click', (e) => {
-                                    e.stopPropagation();
-                                    UILogic.showConfirmModal(chat.id);
-                                });
-                                DOMElements.chatListContainer.appendChild(chatBtn);
-                            });
-                            const currentChatData = chatList.find(chat => chat.id === currentChatId);
-                            if (currentChatData) {
-                                DOMElements.currentChatTitleElement.textContent = currentChatData.title;
-                                UILogic.updateWebsiteTitle(currentChatData.title);
-                            } else if (chatList.length > 0) {
-                                this.switchChat(chatList[chatList.length - 1].id);
-                            }
-                        }
-                    }, error => console.error("Error fetching chat list:", error));
+                saveChat(chatId, messages) {
+                    chatData[chatId] = {
+                        title: messages[0].text,
+                        history: messages
+                    };
+                    localStorage.setItem('gemini_chat_data', JSON.stringify(chatData));
+                    this.renderChatList();
                 },
-                setupChatListener(chatId) {
-                    const messagesRef = collection(db, `/artifacts/${appId}/users/${userId}/chats/${chatId}/messages`);
-                    onSnapshot(query(messagesRef), snapshot => {
-                        DOMElements.chatContainer.innerHTML = '';
-                        snapshot.docs.sort((a, b) => (a.data().timestamp?.toMillis() || 0) - (b.data().timestamp?.toMillis() || 0))
-                                     .forEach(doc => UILogic.displayMessage(doc.data().text, doc.data().isUser, doc.data().imageData));
-                        DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                    }, error => console.error("Error fetching messages:", error));
-                },
-                async createNewChat() {
-                    if (!db || !userId) return;
-                    try {
-                        const chatsCollectionRef = collection(db, `/artifacts/${appId}/users/${userId}/chats`);
-                        const newChatDocRef = doc(chatsCollectionRef);
-                        currentChatId = newChatDocRef.id;
-                        isFirstMessageOfChat = true;
-                        await setDoc(newChatDocRef, { title: "New Chat", createdAt: serverTimestamp() });
-                        this.switchChat(currentChatId);
-                    } catch (e) {
-                        console.error("Error creating new chat: ", e);
-                    }
-                },
-                async deleteChat(chatId) {
-                    if (!db || !userId) return;
-                    try {
-                        const messagesRef = collection(db, `/artifacts/${appId}/users/${userId}/chats/${chatId}/messages`);
-                        const messagesSnapshot = await getDocs(messagesRef);
-                        await Promise.all(messagesSnapshot.docs.map(doc => deleteDoc(doc.ref)));
-                        await deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/chats/${chatId}`));
-                        console.log(`Chat with ID ${chatId} successfully deleted.`);
-                        if (currentChatId === chatId) {
-                            this.createNewChat();
-                        }
-                    } catch (e) {
-                        console.error("Error removing chat: ", e);
-                    }
-                },
-                switchChat(chatId) {
+                loadChat(chatId) {
                     currentChatId = chatId;
-                    DOMElements.homePage.classList.add('hidden');
-                    DOMElements.mainContent.classList.remove('hidden');
-                    this.setupChatListener(chatId);
-                    UILogic.toggleSidebar();
+                    const chat = chatData[chatId];
+                    if (chat) {
+                        DOMElements.chatContainer.innerHTML = '';
+                        chat.history.forEach(msg => UILogic.displayMessage(msg.text, msg.isUser, msg.imageData));
+                        DOMElements.currentChatTitleElement.textContent = chat.title.length > 20 ? chat.title.substring(0, 20) + '...' : chat.title;
+                        DOMElements.mainContent.classList.remove('hidden');
+                        DOMElements.homePage.classList.add('hidden');
+                        UILogic.updateWebsiteTitle(chat.title);
+                        DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
+                    }
                 },
-                async addMessage(text, isUser, imageData = null) {
-                    if (!db || !userId || !currentChatId) {
-                        console.error("Firestore not ready. Message not saved.");
-                        return;
+                createNewChat() {
+                    const newChatId = `chat-${Date.now()}`;
+                    chatData[newChatId] = {
+                        title: 'New Chat',
+                        history: []
+                    };
+                    localStorage.setItem('gemini_chat_data', JSON.stringify(chatData));
+                    this.loadChat(newChatId);
+                    this.renderChatList();
+                    DOMElements.messageInput.focus();
+                },
+                deleteChat(chatId) {
+                    delete chatData[chatId];
+                    localStorage.setItem('gemini_chat_data', JSON.stringify(chatData));
+                    if (Object.keys(chatData).length === 0) {
+                        DOMElements.homePage.classList.remove('hidden');
+                        DOMElements.mainContent.classList.add('hidden');
+                        UILogic.updateWebsiteTitle("Gemini AI Chatbot");
+                        this.createNewChat();
+                    } else {
+                        this.loadChat(Object.keys(chatData)[0]);
                     }
-                    const messagesRef = collection(db, `/artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
-                    try {
-                        await addDoc(messagesRef, { text, isUser, imageData, timestamp: serverTimestamp() });
-                    } catch (e) {
-                        console.error("Error adding document: ", e);
-                    }
+                    this.renderChatList();
+                },
+                renderChatList() {
+                    DOMElements.chatListContainer.innerHTML = '';
+                    const sortedChatIds = Object.keys(chatData).sort((a, b) => {
+                        const dateA = new Date(chatData[a].history[0]?.timestamp || 0);
+                        const dateB = new Date(chatData[b].history[0]?.timestamp || 0);
+                        return dateB - dateA;
+                    });
+                    sortedChatIds.forEach(id => {
+                        const chat = chatData[id];
+                        const chatTitleElement = document.createElement('div');
+                        chatTitleElement.className = `flex items-center justify-between p-2 rounded-lg cursor-pointer ${id === currentChatId ? 'bg-indigo-600' : 'hover:bg-gray-700'}`;
+                        chatTitleElement.innerHTML = `
+                            <span class="truncate">${chat.title}</span>
+                            <button class="delete-chat-btn p-1 ml-2 rounded-full hover:bg-red-500 transition-colors duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        `;
+                        chatTitleElement.onclick = () => this.loadChat(id);
+                        chatTitleElement.querySelector('.delete-chat-btn').onclick = (event) => {
+                            event.stopPropagation();
+                            UILogic.showConfirmModal(id);
+                        };
+                        DOMElements.chatListContainer.appendChild(chatTitleElement);
+                    });
                 }
             };
-
-            // API Interactions
-            const API = {
-                async sendMessage(message) {
-                    const apiKey = ""; // API key is provided by the Immersive Canvas runtime
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                    UILogic.showStatusMessage("Thinking for a good response...");
-                    
-                    const chatHistory = await this.getChatHistory();
-                    const newParts = [];
-                    if (message) newParts.push({ text: message });
-                    if (selectedImage) newParts.push({ inlineData: selectedImage });
-                    chatHistory.push({ role: "user", parts: newParts });
+            
+            // API Call Logic
+            const APILogic = {
+                sendMessage(userMessage, chatHistory) {
+                    UILogic.showStatusMessage('Gemini is typing...');
+                    DOMElements.messageInput.disabled = true;
+                    DOMElements.sendButton.disabled = true;
 
                     const payload = {
-                        contents: chatHistory,
-                        systemInstruction: { parts: [{ text: "You are a helpful and friendly chatbot. Your responses should be conversational, detailed, and approximately 2 to 3 sentences long. Your responses must be thorough and provide comprehensive information." }] },
+                        contents: chatHistory.map(msg => ({
+                            role: msg.isUser ? 'user' : 'model',
+                            parts: [{ text: msg.text }]
+                        }))
+                    };
+                    
+                    if (selectedImage) {
+                        const lastUserMessage = payload.contents.findLast(c => c.role === 'user');
+                        if (lastUserMessage) {
+                            lastUserMessage.parts = [
+                                { text: lastUserMessage.parts[0].text },
+                                { inlineData: selectedImage }
+                            ];
+                        }
+                    }
+
+                    // Simple exponential backoff retry logic
+                    let retries = 0;
+                    const maxRetries = 5;
+                    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+                    const makeApiCall = async () => {
+                        try {
+                            const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+                            let botResponseText = 'An unexpected error occurred.';
+
+                            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                                botResponseText = result.candidates[0].content.parts[0].text;
+                            }
+                            
+                            const newChatHistory = [...chatHistory, { text: botResponseText, isUser: false, timestamp: Date.now() }];
+                            UILogic.displayMessage(botResponseText, false);
+                            Data.saveChat(currentChatId, newChatHistory);
+                            
+                        } catch (error) {
+                            console.error('API call failed:', error);
+                            if (retries < maxRetries) {
+                                retries++;
+                                await delay(Math.pow(2, retries) * 100);
+                                return makeApiCall();
+                            } else {
+                                UILogic.displayMessage(`I'm sorry, I'm unable to connect right now. Please try again later.`, false);
+                            }
+                        } finally {
+                            UILogic.hideStatusMessage();
+                            DOMElements.messageInput.disabled = false;
+                            DOMElements.sendButton.disabled = false;
+                            DOMElements.messageInput.focus();
+                        }
                     };
 
-                    try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        if (!response.ok) throw new Error(`API error: ${response.status} ${response.statusText}`);
-                        const result = await response.json();
-                        const botMessage = result.candidates[0].content.parts[0].text;
-                        Database.addMessage(botMessage, false);
-                    } catch (error) {
-                        console.error("API call failed:", error);
-                        UILogic.displayMessage("Sorry, I'm having trouble connecting right now. Please try again later.", false);
-                    } finally {
-                        UILogic.hideStatusMessage();
-                        DOMElements.messageInput.disabled = false;
-                        DOMElements.sendButton.disabled = false;
-                    }
+                    makeApiCall();
                 },
-                async getChatHistory() {
-                    if (!db || !userId || !currentChatId) return [];
-                    const messagesRef = collection(db, `/artifacts/${appId}/users/${userId}/chats/${currentChatId}/messages`);
-                    const querySnapshot = await getDocs(messagesRef);
-                    return querySnapshot.docs.sort((a, b) => (a.data().timestamp?.toMillis() || 0) - (b.data().timestamp?.toMillis() || 0))
-                                         .map(doc => {
-                                             const data = doc.data();
-                                             const role = data.isUser ? "user" : "model";
-                                             let parts = [];
-                                             if (data.text) parts.push({ text: data.text });
-                                             if (data.imageData) parts.push({ inlineData: data.imageData });
-                                             return { role, parts };
-                                         });
+                handleSendMessage() {
+                    const messageText = DOMElements.messageInput.value.trim();
+                    if (messageText === '' && !selectedImage) return;
+
+                    let chatHistory = chatData[currentChatId].history;
+
+                    UILogic.displayMessage(messageText, true, selectedImage);
+                    
+                    const userMessage = {
+                        text: messageText,
+                        isUser: true,
+                        timestamp: Date.now(),
+                        imageData: selectedImage
+                    };
+
+                    const updatedHistory = [...chatHistory, userMessage];
+                    Data.saveChat(currentChatId, updatedHistory);
+
+                    DOMElements.messageInput.value = '';
+                    selectedImage = null;
+                    DOMElements.imageInput.value = '';
+                    DOMElements.imagePreviewContainer.classList.add('hidden');
+
+                    APILogic.sendMessage(messageText, updatedHistory);
                 }
             };
 
-            // Event Handlers
-            const EventHandlers = {
-                handleNewChat() {
-                    Database.createNewChat();
-                },
-                handleSendMessage() {
-                    const message = DOMElements.messageInput.value.trim();
-                    if (message || selectedImage) {
-                        if (isFirstMessageOfChat) {
-                            const chatDocRef = doc(db, `/artifacts/${appId}/users/${userId}/chats/${currentChatId}`);
-                            let title = message.substring(0, 20).trim() || 'Image Chat';
-                            title = title.charAt(0).toUpperCase() + title.slice(1);
-                            setDoc(chatDocRef, { title }, { merge: true });
-                            DOMElements.currentChatTitleElement.textContent = title;
-                            UILogic.updateWebsiteTitle(title);
-                            isFirstMessageOfChat = false;
-                        }
-                        Database.addMessage(message, true, selectedImage);
-                        DOMElements.messageInput.value = '';
-                        DOMElements.imageInput.value = '';
-                        selectedImage = null;
-                        DOMElements.imagePreviewContainer.classList.add('hidden');
-                        DOMElements.messageInput.disabled = true;
-                        DOMElements.sendButton.disabled = true;
-                        API.sendMessage(message);
-                    }
-                },
-                handleImageChange(event) {
-                    const file = event.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            selectedImage = { mimeType: file.type, data: reader.result.split(',')[1] };
-                            DOMElements.imagePreview.src = reader.result;
-                            DOMElements.imagePreviewContainer.classList.remove('hidden');
+            // Image handling logic
+            DOMElements.imageInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64Data = reader.result.split(',')[1];
+                        selectedImage = {
+                            mimeType: file.type,
+                            data: base64Data
                         };
-                        reader.readAsDataURL(file);
-                    }
-                },
-                handleRemoveImage() {
-                    selectedImage = null;
-                    DOMElements.imageInput.value = '';
-                    DOMElements.imagePreview.src = '';
-                    DOMElements.imagePreviewContainer.classList.add('hidden');
-                },
-                handleThemeToggle(e) {
-                    const theme = e.target.checked ? 'dark' : 'light';
-                    document.body.classList.toggle('dark', theme === 'dark');
-                    localStorage.setItem('theme', theme);
+                        DOMElements.imagePreview.src = reader.result;
+                        DOMElements.imagePreviewContainer.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
                 }
-            };
+            });
+
+            DOMElements.removeImageBtn.addEventListener('click', () => {
+                selectedImage = null;
+                DOMElements.imageInput.value = '';
+                DOMElements.imagePreview.src = '';
+                DOMElements.imagePreviewContainer.classList.add('hidden');
+            });
             
-            // Add all event listeners
-            DOMElements.startChatBtn.addEventListener('click', EventHandlers.handleNewChat);
-            DOMElements.newChatBtn.addEventListener('click', EventHandlers.handleNewChat);
-            DOMElements.sendButton.addEventListener('click', EventHandlers.handleSendMessage);
-            DOMElements.messageInput.addEventListener('keydown', e => { if (e.key === 'Enter') EventHandlers.handleSendMessage(); });
-            DOMElements.menuBtn.addEventListener('click', () => UILogic.toggleSidebar());
-            DOMElements.cancelDeleteBtn.addEventListener('click', () => UILogic.hideConfirmModal());
-            DOMElements.settingsInput.addEventListener('click', () => UILogic.showSettingsModal());
-            DOMElements.closeSettingsBtn.addEventListener('click', () => UILogic.hideSettingsModal());
-            DOMElements.themeToggle.addEventListener('change', EventHandlers.handleThemeToggle);
-            DOMElements.imageInput.addEventListener('change', EventHandlers.handleImageChange);
-            DOMElements.removeImageBtn.addEventListener('click', EventHandlers.handleRemoveImage);
-            
-            // Initialize app
+            // Event listeners
+            DOMElements.startChatBtn.addEventListener('click', () => {
+                Data.createNewChat();
+            });
+            DOMElements.newChatBtn.addEventListener('click', Data.createNewChat);
+            DOMElements.sendButton.addEventListener('click', APILogic.handleSendMessage);
+            DOMElements.messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    APILogic.handleSendMessage();
+                }
+            });
+            DOMElements.menuBtn.addEventListener('click', () => {
+                UILogic.toggleSidebar();
+            });
+            DOMElements.settingsInput.addEventListener('click', () => {
+                UILogic.showSettingsModal();
+            });
+            DOMElements.closeSettingsBtn.addEventListener('click', () => {
+                UILogic.hideSettingsModal();
+            });
+            DOMElements.themeToggle.addEventListener('change', (event) => {
+                const theme = event.target.checked ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                UILogic.applyTheme();
+            });
+            DOMElements.cancelDeleteBtn.addEventListener('click', () => {
+                UILogic.hideConfirmModal();
+            });
+
+            // Initial setup
             UILogic.applyTheme();
-            Database.init();
+            Data.init();
         };
     </script>
 </body>
