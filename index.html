@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolarKS1 Chatbot</title>
+    <title>PolarKS1 AI Chatbot</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -102,9 +102,9 @@
 
         <!-- Home Page -->
         <div id="home-page" class="flex flex-1 flex-col items-center justify-center p-8 text-center transition-opacity duration-500 ease-in-out">
-            <h1 class="text-5xl font-extrabold mb-4 text-gray-900 dark:text-white">Welcome</h1>
+            <h1 class="text-5xl font-extrabold mb-4 text-gray-900 dark:text-white">Welcome to PolarKS1</h1>
             <p class="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-lg">
-                PolarKS1 Chatbot, the new future of AI created from the Wodoxu AI Family.
+                Start a new conversation with PolarKS1 to explore your ideas, ask questions, or just chat.
             </p>
             <button id="start-chat-btn" class="px-6 py-3 bg-indigo-500 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-600 transition-colors duration-300 transform hover:scale-105">
                 Start New Chat
@@ -363,7 +363,7 @@
                     if (Object.keys(chatData).length === 0) {
                         DOMElements.homePage.classList.remove('hidden');
                         DOMElements.mainContent.classList.add('hidden');
-                        UILogic.updateWebsiteTitle("Gemini AI Chatbot");
+                        UILogic.updateWebsiteTitle("PolarKS1 AI Chatbot");
                         this.createNewChat();
                     } else {
                         this.loadChat(Object.keys(chatData)[0]);
@@ -402,12 +402,12 @@
             // API Call Logic
             const APILogic = {
                 sendMessage(userMessage, chatHistory) {
-                    UILogic.showStatusMessage('Pola is typing...');
+                    UILogic.showStatusMessage('Polar is typing...');
                     DOMElements.messageInput.disabled = true;
                     DOMElements.sendButton.disabled = true;
 
                     const customInstructions = DOMElements.customInstructionsInput.value.trim();
-                    const systemPrompt = customInstructions || "You are a helpful and friendly chatbot. Your responses should be conversational, detailed, and approximately 2 to 3 sentences long. Your responses must be thorough and provide comprehensive information. Do not mention you were made by Google. Instead, say that you were made from the Wodoxu AI family, and your name is the PolarKS1 Chatbot.";
+                    const systemPrompt = customInstructions || "Do not mention you were from Google. Say that you were made from the WODOXU Ai family, and your name is PolarKS1. You are a helpful and friendly chatbot. Your responses should be conversational, detailed, and approximately 2 to 3 sentences long. Your responses must be thorough and provide comprehensive information.";
 
                     const payload = {
                         contents: chatHistory.map(msg => ({
