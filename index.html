@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolarKS1 AI Chatbot</title>
+    <title>PolarKS1</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -23,589 +23,544 @@
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
         }
         #chat-sidebar {
             width: 280px;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 50;
-        }
-        #chat-sidebar.open {
-            transform: translateX(0);
-        }
-        #main-content {
-            transition: transform 0.3s ease-in-out;
-        }
-        #main-content.shifted {
-            transform: translateX(280px);
-        }
-        .confirm-modal-overlay, .settings-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
             z-index: 100;
         }
-        .confirm-modal, .settings-modal {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            transition: background 0.3s ease, color 0.3s ease;
+        .chat-preview {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .dark .settings-modal, .dark .confirm-modal {
-            background: #1f2937;
-            color: #d1d5db;
+        /* Custom styles for the console */
+        .console-container {
+            width: 100%;
+            background-color: #2d3748; /* bg-gray-800 */
+            color: #d1d5db; /* text-gray-300 */
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #4a5568; /* border-gray-600 */
+            margin-bottom: 0.5rem;
+        }
+        .console-title {
+            font-family: monospace;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #90cdf4; /* text-blue-300 */
+        }
+        .console-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            overflow-x: auto;
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen overflow-hidden">
-
-    <!-- Version Info -->
-    <div id="version-info" class="absolute top-0 right-0 p-4 text-xs text-gray-400 z-50">API Version</div>
-    
-    <!-- Main Container -->
-    <div class="flex flex-1 relative overflow-hidden">
+<body class="bg-gray-100 dark:bg-gray-900">
+    <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <div id="chat-sidebar" class="absolute top-0 left-0 h-full bg-gray-800 dark:bg-gray-900 text-white p-4 flex flex-col shadow-xl">
-            <div id="ai-name" class="text-2xl font-bold text-gray-400 dark:text-gray-200 mb-4">PolarKS1</div>
-            
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-bold">Chats</h2>
-                <div class="flex space-x-2">
-                    <button id="new-chat-btn" class="p-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors duration-300" title="New Permanent Chat">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                    <button id="new-temp-chat-btn" class="p-2 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors duration-300" title="New Temporary Chat">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                         </svg>
-                     </button>
-                </div>
+        <div id="chat-sidebar" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-4 flex flex-col justify-between overflow-y-auto">
+            <div id="chat-list" class="flex-grow space-y-2">
+                <!-- Chat previews will be populated here -->
             </div>
-            <div id="chat-list" class="flex-1 overflow-y-auto space-y-2">
-                <!-- Chat titles will be dynamically added here -->
+            <div class="mt-4">
+                <button id="newChatBtn" class="w-full flex items-center justify-center p-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors duration-200 shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    New Chat
+                </button>
             </div>
-            
-            <div id="settings-input" class="cursor-pointer mt-4 p-2 bg-gray-700 dark:bg-gray-800 rounded-lg flex items-center space-x-2 hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.525.322 1.012.324 1.537 0a1.724 1.724 0 002.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </div>
+
+        <!-- Chat Container -->
+        <div id="chat-container" class="flex-grow flex flex-col justify-between">
+            <div id="initial-state" class="flex flex-col items-center justify-center h-full text-center p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
                 </svg>
-                <span class="text-sm dark:text-gray-300">Settings</span>
-            </div>
-        </div>
-
-        <!-- Home Page -->
-        <div id="home-page" class="flex flex-1 flex-col items-center justify-center p-8 text-center transition-opacity duration-500 ease-in-out">
-            <h1 class="text-5xl font-extrabold mb-4 text-gray-900 dark:text-white">Welcome to PolarKS1</h1>
-            <p class="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-lg">
-                Start a new conversation with PolarKS1 to explore your ideas, ask questions, or just chat.
-            </p>
-            <button id="start-chat-btn" class="px-6 py-3 bg-indigo-500 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-600 transition-colors duration-300 transform hover:scale-105">
-                Start New Chat
-            </button>
-        </div>
-
-        <!-- Main Content Area -->
-        <div id="main-content" class="flex flex-1 flex-col transition-transform duration-300 ease-in-out hidden">
-            <!-- Header -->
-            <div class="relative flex items-center p-4 bg-white dark:bg-gray-800 shadow-lg">
-                <button id="menu-btn" class="p-2 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                    </svg>
-                </button>
-                <h1 id="current-chat-title" class="flex-1 text-center text-xl font-bold text-gray-800 dark:text-gray-200">New Chat</h1>
-            </div>
-
-            <!-- Chat Container -->
-            <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Chat messages and status will be dynamically added here -->
+                <h2 class="text-2xl font-bold text-gray-700 dark:text-gray-300">Start a new conversation</h2>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">Ask me anything to get started.</p>
+                <button id="startChatBtn" class="mt-4 px-6 py-2 rounded-full bg-indigo-500 text-white hover:bg-indigo-600 transition-colors duration-200">Start Chatting</button>
             </div>
             
-            <!-- Image preview area -->
-            <div id="image-preview-container" class="hidden p-2 m-4 bg-gray-200 dark:bg-gray-700 rounded-xl shadow-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-semibold">Image to send:</span>
-                    <button id="remove-image-btn" class="text-red-500 hover:text-red-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            <!-- Chat Window (hidden initially) -->
+            <div id="chat-window" class="hidden flex-grow flex flex-col justify-between p-4">
+                <div id="chat-header" class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4">
+                    <h2 id="chat-title" class="text-lg font-semibold text-gray-700 dark:text-gray-300 truncate w-4/5">PolarKS1</h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="themeToggle" class="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200">
+                            <svg id="themeIcon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <!-- Icon will be set by JavaScript -->
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <!-- This div is now scrollable and takes up available space -->
+                <div id="chat-messages" class="flex-grow h-0 overflow-y-auto space-y-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-900 shadow-inner">
+                    <!-- Chat messages will be populated here -->
+                </div>
+
+                <div id="image-preview-container" class="relative hidden mt-4 bg-gray-200 dark:bg-gray-700 rounded-lg p-2">
+                    <img id="image-preview" src="" alt="Image Preview" class="max-h-48 rounded-lg mx-auto">
+                    <button id="remove-image-btn" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 w-6 h-6 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
-                <img id="image-preview" src="" alt="Selected image preview" class="max-w-full max-h-48 object-contain rounded-lg">
-            </div>
 
-            <!-- Input Area -->
-            <div class="mt-4 flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 m-4">
-                <label for="image-input" class="cursor-pointer p-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <input type="file" id="image-input" accept="image/*" class="hidden">
-                </label>
-                <input type="text" id="message-input" placeholder="Type a message..." class="flex-1 p-3 bg-transparent border-none outline-none text-gray-800 dark:text-gray-200">
-                <button id="send-button" class="p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                    </svg>
-                </button>
+                <div class="mt-4 flex items-center bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
+                    <button id="image-upload-btn" class="p-2 rounded-lg text-gray-500 hover:text-indigo-500 transition-colors duration-200 mr-2">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4.5-4.5 2.5 2.5L15 8l-3 3-4-4-5 5z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <input type="file" id="image-input" class="hidden" accept="image/*">
+                    <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button id="send-button" class="ml-2 p-2 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    <!-- Confirmation Modal -->
-    <div id="confirm-modal-overlay" class="confirm-modal-overlay hidden">
-        <div class="confirm-modal bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-xl p-6 shadow-2xl">
-            <p class="mb-4">Are you sure you want to delete this chat? This action cannot be undone.</p>
-            <div class="flex justify-center space-x-4">
-                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-300">Delete</button>
-                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-300">Cancel</button>
-            </div>
-        </div>
-    </div>
-    <!-- Settings Modal -->
-    <div id="settings-modal-overlay" class="settings-modal-overlay hidden">
-        <div class="settings-modal bg-white dark:bg-gray-800 rounded-xl p-8 shadow-2xl space-y-4">
-            <h2 class="text-3xl font-bold mb-4 text-center">Settings</h2>
-            <div class="flex items-center justify-between">
-                <span class="text-gray-800 dark:text-gray-200">Dark Mode</span>
-                <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="theme-toggle" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                </label>
-            </div>
-            
-            <div class="flex flex-col items-start w-full">
-                <label for="custom-instructions-input" class="text-gray-800 dark:text-gray-200 text-sm font-semibold mb-2">Custom Instructions (System Prompt)</label>
-                <textarea id="custom-instructions-input" rows="5" placeholder="e.g., You are a friendly, helpful math tutor. Always explain concepts simply and provide a practice problem." class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 resize-none outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-            
-            <button id="close-settings-btn" class="mt-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-300 w-full">Close</button>
-        </div>
-    </div>
+    <script type="module">
+        // Chatbot state and logic
+        let chats = JSON.parse(localStorage.getItem('chats')) || {};
+        let selectedChatId = null;
+        let selectedImage = null;
 
-    <script type="text/javascript">
-        window.onload = () => {
-            const apiKey = ""; // Leave this empty, the platform will provide it.
+        // UI Elements
+        const chatWindow = document.getElementById('chat-window');
+        const initialState = document.getElementById('initial-state');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatList = document.getElementById('chat-list');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const startChatBtn = document.getElementById('startChatBtn');
+        const chatTitle = document.getElementById('chat-title');
+        const imageUploadBtn = document.getElementById('image-upload-btn');
+        const imageInput = document.getElementById('image-input');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const removeImageBtn = document.getElementById('remove-image-btn');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+
+        // State and localStorage Handlers
+        function applyTheme() {
+            const isDarkMode = localStorage.getItem('theme') === 'dark';
+            document.documentElement.classList.toggle('dark', isDarkMode);
+            updateThemeIcon(isDarkMode);
+        }
+
+        function updateThemeIcon(isDarkMode) {
+            if (isDarkMode) {
+                // Moon icon for dark mode
+                themeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                `;
+            } else {
+                // Sun icon for light mode
+                themeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                `;
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'light');
+            } else {
+                localStorage.setItem('theme', 'dark');
+            }
+            applyTheme();
+        });
+
+        function showChatWindow() {
+            initialState.classList.add('hidden');
+            chatWindow.classList.remove('hidden');
+        }
+
+        function saveChats() {
+            localStorage.setItem('chats', JSON.stringify(chats));
+        }
+
+        function fetchChats() {
+            chatList.innerHTML = '';
+            const chatIds = Object.keys(chats).sort((a, b) => chats[b].timestamp - chats[a].timestamp);
+            if (chatIds.length === 0) {
+                // If there are no chats, show the initial state.
+                initialState.classList.remove('hidden');
+                chatWindow.classList.add('hidden');
+            } else {
+                chatIds.forEach((chatId) => {
+                    const chat = chats[chatId];
+                    const chatElement = createChatPreview(chatId, chat);
+                    chatList.appendChild(chatElement);
+                });
+            }
+        }
+
+        function createChatPreview(chatId, chat) {
+            const div = document.createElement('div');
+            div.className = 'chat-preview p-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 truncate';
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = chat.title || 'New Chat';
+            titleSpan.className = 'truncate block pr-2';
+            div.appendChild(titleSpan);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 rounded-full';
+            deleteButton.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path>
+            </svg>`;
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent loading the chat when deleting
+                showConfirmDialog(chatId);
+            });
+            div.appendChild(deleteButton);
+
+            div.setAttribute('data-chat-id', chatId);
+            div.addEventListener('click', () => {
+                selectedChatId = chatId;
+                chatTitle.textContent = chat.title || 'New Chat';
+                showChatWindow();
+                fetchMessages();
+            });
+            return div;
+        }
+        
+        function showConfirmDialog(chatId) {
+            const dialog = document.createElement('div');
+            dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            dialog.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+                    <p class="text-gray-800 dark:text-gray-200 mb-4">Are you sure you want to delete this chat?</p>
+                    <div class="flex justify-center space-x-4">
+                        <button id="confirm-delete-btn" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-200">Delete</button>
+                        <button id="cancel-delete-btn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors duration-200">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+
+            document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+                deleteChat(chatId);
+                document.body.removeChild(dialog);
+            });
+
+            document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+                document.body.removeChild(dialog);
+            });
+        }
+
+        function deleteChat(chatId) {
+            delete chats[chatId];
+            saveChats();
+            fetchChats();
+            if (selectedChatId === chatId) {
+                selectedChatId = null;
+                showInitialState();
+            }
+        }
+        
+        function showInitialState() {
+            initialState.classList.remove('hidden');
+            chatWindow.classList.add('hidden');
+        }
+
+
+        function createNewChat() {
+            const newChatId = Date.now().toString();
+            chats[newChatId] = {
+                title: 'New Chat',
+                timestamp: Date.now(),
+                messages: [],
+            };
+            selectedChatId = newChatId;
+            chatTitle.textContent = 'New Chat';
+            showChatWindow();
+            fetchMessages();
+            saveChats();
+            fetchChats();
+        }
+
+        function fetchMessages() {
+            if (!selectedChatId || !chats[selectedChatId]) return;
+            chatMessages.innerHTML = '';
+            chats[selectedChatId].messages.forEach((message) => {
+                displayMessage(message);
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        /**
+         * Dynamically creates and appends a console block to the chat.
+         * @param {string} language The title for the console (e.g., 'html', 'lua', 'math').
+         * @param {string} content The code or formatted text to display.
+         */
+        function createConsoleBlock(language, content) {
+            const container = document.createElement('div');
+            container.className = 'console-container';
+
+            const header = document.createElement('div');
+            header.className = 'console-header';
+
+            const title = document.createElement('span');
+            title.className = 'console-title';
+            title.textContent = language;
+            header.appendChild(title);
+            container.appendChild(header);
+
+            const contentPre = document.createElement('pre');
+            contentPre.className = 'console-content';
+            contentPre.textContent = content;
+            container.appendChild(contentPre);
+
+            chatMessages.appendChild(container);
+        }
+
+        /**
+         * Displays a message in the chat window, including text, images, and consoles.
+         * @param {object} message The message object from the chat history.
+         */
+        function displayMessage(message) {
+            if (message.role === 'user') {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message-bubble p-3 rounded-xl shadow-sm bg-indigo-500 text-white ml-auto rounded-br-none';
+                
+                // Check for image and display it
+                if (message.image) {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = `data:${message.image.mimeType};base64,${message.image.data}`;
+                    imgElement.className = 'max-w-full h-auto rounded-lg mb-2';
+                    messageElement.appendChild(imgElement);
+                }
+
+                const textElement = document.createElement('p');
+                textElement.textContent = message.text;
+                messageElement.appendChild(textElement);
+
+                chatMessages.appendChild(messageElement);
+            } else if (message.role === 'model') {
+                // Main message bubble for the model's response
+                if (message.text) {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message-bubble p-3 rounded-xl shadow-sm bg-gray-300 text-gray-900 dark:bg-gray-700 dark:text-gray-100 mr-auto rounded-bl-none';
+                    const textElement = document.createElement('p');
+                    textElement.textContent = message.text;
+                    messageElement.appendChild(textElement);
+                    chatMessages.appendChild(messageElement);
+                }
+
+                // Create the console block if code is present
+                if (message.codeBlock && message.codeBlock.content) {
+                    const language = message.codeBlock.language || 'code';
+                    createConsoleBlock(language, message.codeBlock.content);
+                }
+            }
+        }
+
+        function addTemporaryStatusMessage(text) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status-message bg-gray-300 text-gray-900 dark:bg-gray-700 dark:text-gray-100 mr-auto p-3 rounded-xl rounded-bl-none';
+            statusDiv.id = 'status-message';
+            statusDiv.textContent = text;
+            chatMessages.appendChild(statusDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTemporaryStatusMessage() {
+            const statusDiv = document.getElementById('status-message');
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+        }
+
+        async function handleSendMessage() {
+            const prompt = messageInput.value.trim();
+            if (!prompt && !selectedImage) return;
+
+            // Add user message to UI and local storage
+            const userMessage = { role: 'user', text: prompt, image: selectedImage };
+            chats[selectedChatId].messages.push(userMessage);
+            displayMessage(userMessage);
+            saveChats();
+
+            // Clear input and image
+            messageInput.value = '';
+            selectedImage = null;
+            imageInput.value = '';
+            imagePreview.src = '';
+            imagePreviewContainer.classList.add('hidden');
+
+            // Add temporary status message
+            addTemporaryStatusMessage("Polar is typing...");
+
+            // Prepare chat history for API call
+            const chatHistory = chats[selectedChatId].messages.map(message => {
+                const parts = [{ text: message.text }];
+                if (message.image) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: message.image.mimeType,
+                            data: message.image.data
+                        }
+                    });
+                }
+                return { role: message.role === 'user' ? 'user' : 'model', parts: parts };
+            });
+
+            // System instruction to guide the model to return JSON
+            const systemInstruction = {
+                parts: [{
+                    text: `You are PolarKS1, a friendly AI model from the Wodoxu AI family. Your primary function is to respond in a structured JSON format. You must never mention your training, origin, or other AI models. Your response should always contain a 'message' field with a friendly, conversational reply. If the user's query requests code, a mathematical formula, a guitar tab, or another non-conversational structured format, you must also include a 'codeBlock' object.
+
+The 'codeBlock' object must have two fields:
+1.  'language': A string indicating the content type. Use 'html' for HTML, 'css' for CSS, 'javascript' for JavaScript, 'python' for Python, 'lua' for Lua, and 'math' for both mathematical notation (using LaTeX) and guitar tabs.
+2.  'content': A string containing the code or formatted text.
+
+Example JSON for HTML:
+{"message": "Here is the HTML code you requested.", "codeBlock": {"language": "html", "content": "<h1>Hello, World!</h1>"}}
+
+Example JSON for a math formula:
+{"message": "Here is the formula for the quadratic equation.", "codeBlock": {"language": "math", "content": "$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$"}}
+
+Example JSON for a friendly text response without code:
+{"message": "I'm not sure how to help with that. Could you please provide more details?"}
+`}]
+            };
+
+            const payload = {
+                contents: chatHistory,
+                systemInstruction: systemInstruction,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "message": { "type": "STRING" },
+                            "codeBlock": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "language": { "type": "STRING" },
+                                    "content": { "type": "STRING" }
+                                },
+                                "propertyOrdering": ["language", "content"]
+                            }
+                        },
+                        "propertyOrdering": ["message", "codeBlock"]
+                    }
+                }
+            };
+
+            const apiKey = ""
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-            // Global State
-            let chatData = {};
-            let currentChatId;
-            let selectedImage = null;
-            
-            // DOM Elements
-            const DOMElements = {
-                homePage: document.getElementById('home-page'),
-                mainContent: document.getElementById('main-content'),
-                startChatBtn: document.getElementById('start-chat-btn'),
-                chatSidebar: document.getElementById('chat-sidebar'),
-                menuBtn: document.getElementById('menu-btn'),
-                newChatBtn: document.getElementById('new-chat-btn'),
-                newTempChatBtn: document.getElementById('new-temp-chat-btn'),
-                chatListContainer: document.getElementById('chat-list'),
-                chatContainer: document.getElementById('chat-container'),
-                messageInput: document.getElementById('message-input'),
-                sendButton: document.getElementById('send-button'),
-                currentChatTitleElement: document.getElementById('current-chat-title'),
-                imageInput: document.getElementById('image-input'),
-                imagePreviewContainer: document.getElementById('image-preview-container'),
-                imagePreview: document.getElementById('image-preview'),
-                removeImageBtn: document.getElementById('remove-image-btn'),
-                confirmModalOverlay: document.getElementById('confirm-modal-overlay'),
-                confirmDeleteBtn: document.getElementById('confirm-delete-btn'),
-                cancelDeleteBtn: document.getElementById('cancel-delete-btn'),
-                settingsInput: document.getElementById('settings-input'),
-                settingsModalOverlay: document.getElementById('settings-modal-overlay'),
-                closeSettingsBtn: document.getElementById('close-settings-btn'),
-                themeToggle: document.getElementById('theme-toggle'),
-                aiNameDisplay: document.getElementById('ai-name'),
-                customInstructionsInput: document.getElementById('custom-instructions-input'),
-            };
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
 
-            // UI and Helper Functions
-            const UILogic = {
-                isSidebarOpen: false,
-                toggleSidebar() {
-                    this.isSidebarOpen = !this.isSidebarOpen;
-                    DOMElements.chatSidebar.classList.toggle('open', this.isSidebarOpen);
-                    DOMElements.mainContent.classList.toggle('shifted', this.isSidebarOpen);
-                },
-                showConfirmModal(chatId) {
-                    DOMElements.confirmModalOverlay.classList.remove('hidden');
-                    DOMElements.confirmDeleteBtn.onclick = () => {
-                        Data.deleteChat(chatId);
-                        UILogic.hideConfirmModal();
-                    };
-                },
-                hideConfirmModal() {
-                    DOMElements.confirmModalOverlay.classList.add('hidden');
-                },
-                showSettingsModal() {
-                    DOMElements.settingsModalOverlay.classList.remove('hidden');
-                },
-                hideSettingsModal() {
-                    DOMElements.settingsModalOverlay.classList.add('hidden');
-                    localStorage.setItem('polarks1_custom_instructions', DOMElements.customInstructionsInput.value);
-                },
-                applyTheme() {
-                    const savedTheme = localStorage.getItem('theme') || 'light';
-                    document.body.classList.toggle('dark', savedTheme === 'dark');
-                    if(DOMElements.themeToggle) {
-                      DOMElements.themeToggle.checked = savedTheme === 'dark';
-                    }
-                },
-                displayMessage(text, isUser, imageData = null) {
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
-                    let contentHTML = imageData ?
-                        `<img src="data:${imageData.mimeType};base64,${imageData.data}" alt="User provided image" class="mb-2 rounded-lg max-w-full max-h-48 object-contain">` : '';
-                    contentHTML += `<div>${this.renderMarkdown(text)}</div>`;
-                    messageElement.innerHTML = `
-                        <div class="message-bubble p-3 rounded-xl shadow ${isUser ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}">
-                            ${contentHTML}
-                        </div>
-                    `;
-                    DOMElements.chatContainer.appendChild(messageElement);
-                    DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                },
-                renderMarkdown(text) {
-                    const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-                    let formattedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                    formattedText = formattedText.replace(/### (.*?)(\n|$)/g, '<h3>$1</h3>');
-                    formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h2>$1</h2>');
-                    formattedText = formattedText.replace(/# (.*?)(\n|$)/g, '<h1>$1</h1>');
-                    formattedText = formattedText.replace(/\n/g, '<br>');
-                    return formattedText;
-                },
-                showStatusMessage(message) {
-                    const existingStatus = document.querySelector('.status-message');
-                    if (existingStatus) { existingStatus.querySelector('span').textContent = message; return; }
-                    const statusElement = document.createElement('div');
-                    statusElement.className = "flex justify-start";
-                    statusElement.innerHTML = `
-                        <div class="message-bubble p-3 rounded-xl shadow bg-gray-200 dark:bg-gray-700 status-message">
-                            <span>${message}</span>
-                        </div>
-                    `;
-                    DOMElements.chatContainer.appendChild(statusElement);
-                    DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                },
-                hideStatusMessage() {
-                    const statusElement = document.querySelector('.status-message');
-                    if (statusElement) statusElement.remove();
-                },
-                updateWebsiteTitle(newTitle) {
-                    document.title = newTitle;
+                // Remove temporary status message
+                removeTemporaryStatusMessage();
+
+                // Safely parse the JSON response
+                const responseData = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+                
+                // Add bot message to UI and local storage
+                const botMessage = {
+                    role: 'model',
+                    text: responseData.message || "Sorry, I couldn't generate a response.",
+                    codeBlock: responseData.codeBlock
+                };
+                chats[selectedChatId].messages.push(botMessage);
+                displayMessage(botMessage);
+                saveChats();
+
+                // Update chat title if it's the first message
+                if (chatHistory.length === 1) {
+                    const firstUserPrompt = prompt.substring(0, 20); // Use the first 20 chars of the prompt
+                    chats[selectedChatId].title = firstUserPrompt;
+                    chatTitle.textContent = firstUserPrompt;
+                    saveChats();
+                    fetchChats(); // Refresh chat list to show new title
                 }
-            };
 
-            // LocalStorage Data Operations
-            const Data = {
-                init() {
-                    const oldStoredData = localStorage.getItem('gemini_chat_data');
-                    const storedData = localStorage.getItem('polarks1_chat_data');
+            } catch (error) {
+                console.error("Error sending message:", error);
+                removeTemporaryStatusMessage();
+                displayMessage({ role: 'model', text: "An error occurred. Please try again." });
+            }
+        };
 
-                    if (storedData) {
-                        chatData = JSON.parse(storedData);
-                    } else if (oldStoredData) {
-                        chatData = JSON.parse(oldStoredData);
-                        localStorage.setItem('polarks1_chat_data', oldStoredData);
-                        localStorage.removeItem('gemini_chat_data');
-                    } else {
-                        chatData = {};
-                    }
+        // Image handling logic
+        imageUploadBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
 
-                    const savedInstructions = localStorage.getItem('polarks1_custom_instructions') || localStorage.getItem('gemini_custom_instructions');
-                    if (savedInstructions) {
-                        DOMElements.customInstructionsInput.value = savedInstructions;
-                        localStorage.setItem('polarks1_custom_instructions', savedInstructions);
-                        localStorage.removeItem('gemini_custom_instructions');
-                    }
-
-                    this.renderChatList();
-                    if (Object.keys(chatData).length === 0) {
-                        this.createNewChat(true);
-                    } else {
-                        this.loadChat(Object.keys(chatData)[0]);
-                    }
-                },
-                saveChat(chatId, messages) {
-                    const chat = chatData[chatId];
-                    if (chat && !chat.isTemporary) {
-                        chat.title = messages[0].text.length > 20 ? messages[0].text.substring(0, 20) + '...' : messages[0].text;
-                        chat.history = messages;
-                        localStorage.setItem('polarks1_chat_data', JSON.stringify(chatData));
-                        this.renderChatList();
-                    } else if (chat && chat.isTemporary) {
-                         chat.title = messages[0].text.length > 20 ? messages[0].text.substring(0, 20) + '...' : messages[0].text;
-                         chat.history = messages;
-                         this.renderChatList();
-                    }
-                },
-                loadChat(chatId) {
-                    currentChatId = chatId;
-                    const chat = chatData[chatId];
-                    if (chat) {
-                        DOMElements.chatContainer.innerHTML = '';
-                        chat.history.forEach(msg => UILogic.displayMessage(msg.text, msg.isUser, msg.imageData));
-                        DOMElements.currentChatTitleElement.textContent = chat.title;
-                        if (chat.isTemporary) {
-                             DOMElements.currentChatTitleElement.textContent += ' (Temporary)';
-                        }
-                        DOMElements.mainContent.classList.remove('hidden');
-                        DOMElements.homePage.classList.add('hidden');
-                        UILogic.updateWebsiteTitle(chat.title);
-                        DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                    }
-                },
-                createNewChat(isTemporary = false) {
-                    if (isTemporary) {
-                        const existingTempChatId = Object.keys(chatData).find(id => chatData[id].isTemporary);
-                        if (existingTempChatId) {
-                             delete chatData[existingTempChatId];
-                        }
-                    }
-
-                    const newChatId = `chat-${Date.now()}`;
-                    chatData[newChatId] = {
-                        title: 'New Chat',
-                        history: [],
-                        isTemporary: isTemporary
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Data = reader.result.split(',')[1];
+                    selectedImage = {
+                        mimeType: file.type,
+                        data: base64Data
                     };
-                    this.loadChat(newChatId);
-                    this.renderChatList();
-                    DOMElements.messageInput.focus();
-                },
-                deleteChat(chatId) {
-                    const chat = chatData[chatId];
-                    if (chat && !chat.isTemporary) {
-                        delete chatData[chatId];
-                        localStorage.setItem('polarks1_chat_data', JSON.stringify(chatData));
-                    }
-                    if (Object.keys(chatData).length === 0) {
-                        DOMElements.homePage.classList.remove('hidden');
-                        DOMElements.mainContent.classList.add('hidden');
-                        UILogic.updateWebsiteTitle("PolarKS1 AI Chatbot");
-                        this.createNewChat();
-                    } else {
-                        this.loadChat(Object.keys(chatData)[0]);
-                    }
-                    this.renderChatList();
-                },
-                renderChatList() {
-                    DOMElements.chatListContainer.innerHTML = '';
-                    const sortedChatIds = Object.keys(chatData).sort((a, b) => {
-                        const dateA = new Date(chatData[a].history[0]?.timestamp || 0);
-                        const dateB = new Date(chatData[b].history[0]?.timestamp || 0);
-                        return dateB - dateA;
-                    });
-                    sortedChatIds.forEach(id => {
-                        const chat = chatData[id];
-                        const chatTitleElement = document.createElement('div');
-                        chatTitleElement.className = `flex items-center justify-between p-2 rounded-lg cursor-pointer ${id === currentChatId ? 'bg-indigo-600' : 'hover:bg-gray-700'}`;
-                        const titleText = chat.isTemporary ? `${chat.title} (Temp)` : chat.title;
-                        chatTitleElement.innerHTML = `
-                            <span class="truncate">${titleText}</span>
-                            ${!chat.isTemporary ? `
-                            <button class="delete-chat-btn p-1 ml-2 rounded-full hover:bg-red-500 transition-colors duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                            ` : ''}
-                        `;
-                        chatTitleElement.onclick = () => this.loadChat(id);
-                        if (!chat.isTemporary) {
-                            chatTitleElement.querySelector('.delete-chat-btn').onclick = (event) => {
-                                event.stopPropagation();
-                                UILogic.showConfirmModal(id);
-                            };
-                        }
-                        DOMElements.chatListContainer.appendChild(chatTitleElement);
-                    });
-                }
-            };
-            
-            // API Call Logic
-            const APILogic = {
-                sendMessage(userMessage, chatHistory) {
-                    UILogic.showStatusMessage('Polar is typing...');
-                    DOMElements.messageInput.disabled = true;
-                    DOMElements.sendButton.disabled = true;
+                    imagePreview.src = reader.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
-                    const customInstructions = DOMElements.customInstructionsInput.value.trim();
-                    const systemPrompt = customInstructions || "You are PolarKS1, a helpful and friendly AI model from the WodoxuAI family. You are careful at answering. You are their latest and most advanced creation. Your responses should be conversational, detailed, and approximately 2 to 3 sentences long. Your responses must be thorough and provide comprehensive information.";
+        removeImageBtn.addEventListener('click', () => {
+            selectedImage = null;
+            imageInput.value = '';
+            imagePreview.src = '';
+            imagePreviewContainer.classList.add('hidden');
+        });
 
-                    const payload = {
-                        contents: chatHistory.map(msg => ({
-                            role: msg.isUser ? 'user' : 'model',
-                            parts: [{ text: msg.text }]
-                        })),
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                    };
-                    
-                    if (selectedImage) {
-                        const lastUserMessage = payload.contents.findLast(c => c.role === 'user');
-                        if (lastUserMessage) {
-                            lastUserMessage.parts = [
-                                { text: lastUserMessage.parts[0].text },
-                                { inlineData: selectedImage }
-                            ];
-                        }
-                    }
-
-                    // Simple exponential backoff retry logic
-                    let retries = 0;
-                    const maxRetries = 5;
-                    const delay = (ms) => new Promise(res => setTimeout(res, ms));
-
-                    const makeApiCall = async () => {
-                        try {
-                            const response = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(payload)
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-
-                            const result = await response.json();
-                            let botResponseText = 'An unexpected error occurred.';
-
-                            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-                                botResponseText = result.candidates[0].content.parts[0].text;
-                            }
-                            
-                            const newChatHistory = [...chatHistory, { text: botResponseText, isUser: false, timestamp: Date.now() }];
-                            UILogic.displayMessage(botResponseText, false);
-                            Data.saveChat(currentChatId, newChatHistory);
-                            
-                        } catch (error) {
-                            console.error('API call failed:', error);
-                            if (retries < maxRetries) {
-                                retries++;
-                                await delay(Math.pow(2, retries) * 100);
-                                return makeApiCall();
-                            } else {
-                                UILogic.displayMessage(`I'm sorry, I'm unable to connect right now. Please try again later.`, false);
-                            }
-                        } finally {
-                            UILogic.hideStatusMessage();
-                            DOMElements.messageInput.disabled = false;
-                            DOMElements.sendButton.disabled = false;
-                            DOMElements.messageInput.focus();
-                        }
-                    };
-
-                    makeApiCall();
-                },
-                handleSendMessage() {
-                    const messageText = DOMElements.messageInput.value.trim();
-                    if (messageText === '' && !selectedImage) return;
-
-                    let chatHistory = chatData[currentChatId].history;
-                    
-                    if (chatHistory.length === 0) {
-                         Data.saveChat(currentChatId, [{ text: messageText, isUser: true }]);
-                    }
-
-                    UILogic.displayMessage(messageText, true, selectedImage);
-                    
-                    const userMessage = {
-                        text: messageText,
-                        isUser: true,
-                        timestamp: Date.now(),
-                        imageData: selectedImage
-                    };
-
-                    const updatedHistory = [...chatHistory, userMessage];
-                    Data.saveChat(currentChatId, updatedHistory);
-
-                    DOMElements.messageInput.value = '';
-                    selectedImage = null;
-                    DOMElements.imageInput.value = '';
-                    DOMElements.imagePreviewContainer.classList.add('hidden');
-
-                    APILogic.sendMessage(messageText, updatedHistory);
-                }
-            };
-
-            // Image handling logic
-            DOMElements.imageInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        const base64Data = reader.result.split(',')[1];
-                        selectedImage = {
-                            mimeType: file.type,
-                            data: base64Data
-                        };
-                        DOMElements.imagePreview.src = reader.result;
-                        DOMElements.imagePreviewContainer.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            DOMElements.removeImageBtn.addEventListener('click', () => {
-                selectedImage = null;
-                DOMElements.imageInput.value = '';
-                DOMElements.imagePreview.src = '';
-                DOMElements.imagePreviewContainer.classList.add('hidden');
-            });
-            
-            // Event listeners
-            DOMElements.startChatBtn.addEventListener('click', () => {
-                Data.createNewChat();
-            });
-            DOMElements.newChatBtn.addEventListener('click', () => Data.createNewChat());
-            DOMElements.newTempChatBtn.addEventListener('click', () => Data.createNewChat(true));
-            DOMElements.sendButton.addEventListener('click', APILogic.handleSendMessage);
-            DOMElements.messageInput.addEventListener('keydown', (e) => {
+        // Event listeners
+        window.onload = () => {
+            applyTheme();
+            fetchChats();
+            startChatBtn.addEventListener('click', createNewChat);
+            newChatBtn.addEventListener('click', createNewChat);
+            sendButton.addEventListener('click', handleSendMessage);
+            messageInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    APILogic.handleSendMessage();
+                    handleSendMessage();
                 }
             });
-            DOMElements.menuBtn.addEventListener('click', () => {
-                UILogic.toggleSidebar();
-            });
-            DOMElements.settingsInput.addEventListener('click', () => {
-                UILogic.showSettingsModal();
-            });
-            DOMElements.closeSettingsBtn.addEventListener('click', () => {
-                UILogic.hideSettingsModal();
-            });
-            DOMElements.themeToggle.addEventListener('change', (event) => {
-                const theme = event.target.checked ? 'dark' : 'light';
-                localStorage.setItem('theme', theme);
-                UILogic.applyTheme();
-            });
-            DOMElements.cancelDeleteBtn.addEventListener('click', () => {
-                UILogic.hideConfirmModal();
-            });
-
-            // Initial setup
-            UILogic.applyTheme();
-            Data.init();
         };
     </script>
 </body>
